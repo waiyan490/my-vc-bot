@@ -6,7 +6,7 @@ from pytgcalls.types import AudioPiped
 import yt_dlp
 
 API_ID = 38991155
-API_HASH = ""
+API_HASH = "6eb307ac1aba4d84679749b9bccc53d1"
 BOT_TOKEN = "8784979169:AAEZJb6IEiKm1clqR5eoI6_eZ92yFuI7LJQ"
 
 app = Client("shwe_zin_music_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
