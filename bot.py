@@ -17,11 +17,17 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 
 # =========================================================
-# EVENT LOOP
+# CHECK SETTINGS
 # =========================================================
 
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
+if not API_ID:
+    raise ValueError("API_ID is missing")
+
+if not API_HASH:
+    raise ValueError("API_HASH is missing")
+
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN is missing")
 
 
 # =========================================================
@@ -46,12 +52,12 @@ call_py = PyTgCalls(app)
 async def start(c, m):
     await m.reply_text(
         "👋 မင်္ဂလာပါ!\n\n"
-        "☁️ Cloud Server ပေါ်မှ Telegram VC Music Bot "
-        "အဆင်သင့် ဖြစ်ပါပြီ။\n\n"
-        "🎵 /play သီချင်းနာမည်\n"
-        "⏸ /pause\n"
-        "▶️ /resume\n"
-        "⏹ /stop"
+        "🎵 Telegram VC Music Bot အဆင်သင့်ဖြစ်ပါပြီ။\n\n"
+        "အသုံးပြုရန်👇\n"
+        "/play သီချင်းနာမည်\n"
+        "/pause\n"
+        "/resume\n"
+        "/stop"
     )
 
 
@@ -64,8 +70,9 @@ async def play(c, m):
 
     if len(m.command) < 2:
         await m.reply_text(
-            "ကျေးဇူးပြု၍ သီချင်းနာမည် ထည့်ပေးပါ။\n\n"
-            "ဥပမာ - /play Shape of You"
+            "❌ သီချင်းနာမည် ထည့်ပေးပါ။\n\n"
+            "ဥပမာ:\n"
+            "/play Shape of You"
         )
         return
 
@@ -73,48 +80,65 @@ async def play(c, m):
     q = " ".join(m.command[1:])
 
     s = await m.reply_text(
-        "⏳ သီချင်းရှာဖွေပြီး Voice Chat သို့ "
-        "ချိတ်ဆက်နေပါပြီ..."
+        "⏳ သီချင်းရှာဖွေနေပါတယ်...\n"
+        "🎵 Voice Chat ကို ချိတ်ဆက်နေပါတယ်..."
     )
 
     try:
+
         os.makedirs("downloads", exist_ok=True)
 
         opts = {
             "format": "bestaudio/best",
-            "postprocessors": [
-                {
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "mp3",
-                    "preferredquality": "192",
-                }
-            ],
             "outtmpl": "downloads/%(id)s.%(ext)s",
             "noplaylist": True,
+            "quiet": True,
+            "no_warnings": True,
         }
 
         with yt_dlp.YoutubeDL(opts) as ydl:
 
-            search_url = (
-                f"ytsearch:{q}"
-                if not q.startswith("http")
-                else q
+            if q.startswith("http"):
+                info = ydl.extract_info(q, download=True)
+            else:
+                info = ydl.extract_info(
+                    f"ytsearch1:{q}",
+                    download=True
+                )
+
+                if "entries" in info:
+                    info = info["entries"][0]
+
+        file_path = None
+
+        video_id = info.get("id")
+
+        if video_id:
+            for filename in os.listdir("downloads"):
+                if filename.startswith(video_id + "."):
+                    file_path = os.path.join(
+                        "downloads",
+                        filename
+                    )
+                    break
+
+        if not file_path:
+            raise FileNotFoundError(
+                "Downloaded audio file not found"
             )
 
-            info = ydl.extract_info(
-                search_url,
-                download=True
-            )
+        # =================================================
+        # JOIN VOICE CHAT
+        # =================================================
 
-            if "entries" in info:
-                info = info["entries"][0]
-
-            file_path = f"downloads/{info['id']}.mp3"
-
-        # Join Voice Chat
         await call_py.join_group_call(
             chat_id,
             AudioPiped(file_path)
+        )
+
+        title = info.get(
+            "title",
+            "Unknown"
         )
 
         username = (
@@ -124,12 +148,12 @@ async def play(c, m):
         )
 
         await s.edit_text(
-            f"▶️ **Now Playing in VC:**\n"
-            f"🎵 {info.get('title', 'Unknown')}\n\n"
-            f"👤 **Requested By:** {username}"
+            f"▶️ **Now Playing**\n\n"
+            f"🎵 {title}\n"
+            f"👤 Requested By: {username}"
         )
 
-        # Delete command after 30 seconds
+        # Command ကို 30 စက္ကန့်နောက် ဖျက်
         await asyncio.sleep(30)
 
         try:
@@ -140,7 +164,8 @@ async def play(c, m):
     except Exception as e:
 
         await s.edit_text(
-            f"❌ **အမှား:**\n`{str(e)}`"
+            f"❌ **အမှားဖြစ်နေပါတယ်**\n\n"
+            f"`{str(e)}`"
         )
 
 
@@ -152,23 +177,31 @@ async def play(c, m):
 async def pause(c, m):
 
     try:
-        await call_py.pause_group_call(m.chat.id)
+
+        await call_py.pause_group_call(
+            m.chat.id
+        )
 
         msg = await m.reply_text(
-            "⏸ သီချင်း ခဏရပ်ထားပါသည်။"
+            "⏸ သီချင်း ခဏရပ်ထားပါပြီ။"
         )
 
         await asyncio.sleep(30)
 
         try:
             await m.delete()
+        except Exception:
+            pass
+
+        try:
             await msg.delete()
         except Exception:
             pass
 
     except Exception as e:
+
         await m.reply_text(
-            f"❌ Error: `{e}`"
+            f"❌ Error: {e}"
         )
 
 
@@ -180,23 +213,31 @@ async def pause(c, m):
 async def resume(c, m):
 
     try:
-        await call_py.resume_group_call(m.chat.id)
+
+        await call_py.resume_group_call(
+            m.chat.id
+        )
 
         msg = await m.reply_text(
-            "▶️ သီချင်း ဆက်လက်ဖွင့်နေပါပြီ။"
+            "▶️ သီချင်း ပြန်ဖွင့်နေပါပြီ။"
         )
 
         await asyncio.sleep(30)
 
         try:
             await m.delete()
+        except Exception:
+            pass
+
+        try:
             await msg.delete()
         except Exception:
             pass
 
     except Exception as e:
+
         await m.reply_text(
-            f"❌ Error: `{e}`"
+            f"❌ Error: {e}"
         )
 
 
@@ -208,7 +249,10 @@ async def resume(c, m):
 async def stop(c, m):
 
     try:
-        await call_py.leave_group_call(m.chat.id)
+
+        await call_py.leave_group_call(
+            m.chat.id
+        )
 
         msg = await m.reply_text(
             "⏹ Voice Chat မှ ထွက်လိုက်ပါပြီ။"
@@ -218,13 +262,18 @@ async def stop(c, m):
 
         try:
             await m.delete()
+        except Exception:
+            pass
+
+        try:
             await msg.delete()
         except Exception:
             pass
 
     except Exception as e:
+
         await m.reply_text(
-            f"❌ Error: `{e}`"
+            f"❌ Error: {e}"
         )
 
 
@@ -234,12 +283,22 @@ async def stop(c, m):
 
 async def main():
 
+    print("🚀 Starting Telegram Bot...")
+
     await app.start()
+
+    print("✅ Pyrogram started")
+
     await call_py.start()
 
-    print("Bot Started Successfully!")
+    print("✅ PyTgCalls started")
+
+    print("🎵 Bot Started Successfully!")
 
     await idle()
+
+    await call_py.stop()
+    await app.stop()
 
 
 # =========================================================
@@ -247,4 +306,4 @@ async def main():
 # =========================================================
 
 if __name__ == "__main__":
-    loop.run_until_complete(main())
+    asyncio.run(main())
