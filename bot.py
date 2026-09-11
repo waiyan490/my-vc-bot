@@ -3,7 +3,7 @@ import asyncio
 
 from pyrogram import Client, filters, idle
 from pytgcalls import PyTgCalls
-from pytgcalls.types import AudioPiped
+from pytgcalls.types.input_stream import AudioPiped
 import yt_dlp
 
 
