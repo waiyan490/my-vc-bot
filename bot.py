@@ -50,7 +50,7 @@ call_py = PyTgCalls(app)
 
 @app.on_message(filters.command("start"))
 async def start(c, m):
-    await m.reply_text(
+    msg = await m.reply_text(
         "👋 မင်္ဂလာပါ!\n\n"
         "🎵 Telegram VC Music Bot အဆင်သင့်ဖြစ်ပါပြီ။\n\n"
         "အသုံးပြုရန်👇\n"
@@ -59,6 +59,17 @@ async def start(c, m):
         "/resume\n"
         "/stop"
     )
+    
+    # ၃၀ စက္ကန့်စောင့်ပြီး မက်ဆေ့ခ်ျများ ဖျက်ရန်
+    await asyncio.sleep(30)
+    try:
+        await m.delete()
+    except Exception:
+        pass
+    try:
+        await msg.delete()
+    except Exception:
+        pass
 
 
 # =========================================================
@@ -69,11 +80,20 @@ async def start(c, m):
 async def play(c, m):
 
     if len(m.command) < 2:
-        await m.reply_text(
+        msg = await m.reply_text(
             "❌ သီချင်းနာမည် ထည့်ပေးပါ။\n\n"
             "ဥပမာ:\n"
             "/play Shape of You"
         )
+        await asyncio.sleep(30)
+        try:
+            await m.delete()
+        except Exception:
+            pass
+        try:
+            await msg.delete()
+        except Exception:
+            pass
         return
 
     chat_id = m.chat.id
@@ -153,11 +173,16 @@ async def play(c, m):
             f"👤 Requested By: {username}"
         )
 
-        # Command ကို 30 စက္ကန့်နောက် ဖျက်
+        # 30 စက္ကန့်စောင့်ပြီး command နှင့် now playing message ကို ဖျက်ရန်
         await asyncio.sleep(30)
 
         try:
             await m.delete()
+        except Exception:
+            pass
+
+        try:
+            await s.delete()
         except Exception:
             pass
 
